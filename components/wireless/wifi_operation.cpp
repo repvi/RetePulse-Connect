@@ -20,7 +20,7 @@
 
 void wifiEventHandlerWrapper(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) 
 {
-    MicroUSC::WifiMaintainer *handler = static_cast<MicroUSC::WifiMaintainer *>(arg);
+    RetePulse::WifiMaintainer *handler = static_cast<RetePulse::WifiMaintainer *>(arg);
     if (handler == NULL) {
         ESP_LOGE(TAG, "Handler is NULL in wifiEventHandlerWrapper");
         return;
@@ -31,7 +31,7 @@ void wifiEventHandlerWrapper(void* arg, esp_event_base_t event_base, int32_t eve
 
 static WifiMaintainerHandler wifi_init_sta_config(char *const ssid, char *const password)
 {
-    MicroUSC::WifiMaintainer *handler = reinterpret_cast<MicroUSC::WifiMaintainer *>(heap_caps_malloc(sizeof(MicroUSC::WifiMaintainer), MALLOC_CAP_8BIT | MALLOC_CAP_DMA));
+    RetePulse::WifiMaintainer *handler = reinterpret_cast<RetePulse::WifiMaintainer *>(heap_caps_malloc(sizeof(RetePulse::WifiMaintainer), MALLOC_CAP_8BIT | MALLOC_CAP_DMA));
     if (handler != NULL) {
         ESP_LOGI(TAG, "Initializing WiFi in station mode with SSID: %s", ssid);
          /* Create an event group for WiFi events */

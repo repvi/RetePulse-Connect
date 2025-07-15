@@ -2,7 +2,7 @@
 
 #define TAG "[WIFI SERVICE]"
 
-namespace MicroUSC {
+namespace RetePulse {
     void WifiMaintainer::startWifi(wifi_config_t *wifi_config) 
     {
         const size_t SSID_SIZE = sizeof(this->wifi_config.sta.ssid);
@@ -49,4 +49,4 @@ namespace MicroUSC {
             xEventGroupSetBits(this->wifi_event_group, WIFI_CONNECTED_BIT);
         }
     }
-} // namespace MicroUSC
+} // namespace RetePulse

@@ -19,6 +19,7 @@ idf_component_register(
         mqtt
         driver
         json
+        
     PRIV_REQUIRES 
         freertos 
         esp_http_client 
@@ -30,5 +31,5 @@ target_compile_definitions(
     ${COMPONENT_LIB}
 
     PRIVATE
-        
+        MQTT_O_DEBUG
 )

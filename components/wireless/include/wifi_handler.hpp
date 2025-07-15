@@ -12,7 +12,7 @@
 #include "string.h"
 #include "esp_log.h"
 
-namespace MicroUSC {
+namespace RetePulse {
     class WifiMaintainer {
         public:
         void startWifi(wifi_config_t *wifi_config);
@@ -31,4 +31,4 @@ namespace MicroUSC {
         uint8_t ssid[32];
         uint8_t password[32];
     };
-} // namespace MicroUSC
+} // namespace RetePulse

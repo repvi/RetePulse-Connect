@@ -7,7 +7,7 @@
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
 
-namespace MicroUSC 
+namespace RetePulse
 {   
     const char *general_key[] = {
         "device_name",
@@ -33,7 +33,7 @@ namespace MicroUSC
         strncpy(this->sensor_type, "uart", STRING_SIZE - 1);
 
         this->mqtt_device_map = hashmap_create(); /* Create a new hashmap for storing MQTT device subscriptions */
-        if (check_device_name(NULL) == 0 && this->mqtt_device_map != NULL) {
+        if (check_device_name(this->config.credentials.client_id) == 0 && this->mqtt_device_map != NULL) {
             esp_err_t con = setupMqttService(this->config.buffer.size, this->config.buffer.out_size);
             if (con == ESP_OK) {
                 ESP_LOGI(TAG, "MQTT service initialized successfully");
@@ -50,21 +50,6 @@ namespace MicroUSC
         vSemaphoreDelete(this->mutex);
         this->mutex = NULL;
         return ESP_FAIL; // Return failure if any step fails
-    }
-
-    const char *MqttMaintainer::getDeviceName() const
-    {
-        return this->name; // Return the device name
-    }
-
-    const char *MqttMaintainer::getLastUpdated() const
-    {
-        return this->last_updated; // Return the last updated timestamp
-    }
-
-    const char *MqttMaintainer::getSensorType() const
-    {
-        return this->sensor_type; // Return the sensor type
     }
 
     bool MqttMaintainer::addMqttClientSubscribe(
@@ -127,7 +112,9 @@ namespace MicroUSC
                 ESP_LOGE(TAG, "Failed to create JSON payload");
                 return -1;
             }
-            return esp_mqtt_client_publish(this->client, topic, json_buffer, json_string_size, 1, 0);
+            else {
+                return esp_mqtt_client_publish(this->client, topic, json_buffer, json_string_size, 1, 0);
+            }
         }
         else {
             return -2;
@@ -237,8 +224,7 @@ namespace MicroUSC
         general_info[3][sensor_type_length] = '\0';
         info_ptrs[3] = general_info[3];
 
-        return send_to_mqtt_service_multiple(
-            reinterpret_cast<MqttMaintainerHandler>(this),
+        return this->sendToMqttServiceMultiple(
             CONNECTION_MQTT_SEND_INFO, 
             (const char **)general_key, 
             (const char **)info_ptrs, 
@@ -272,7 +258,17 @@ namespace MicroUSC
         //}
     }
 
-    void MqttMaintainer::mqttConnectHandler() 
+    static void reconfigure_device(mqtt_data_package_t *package)
+    {
+        MqttMaintainer::mqttReconfigure(package->handler);
+    }
+
+    void MqttMaintainer::mqttReconfigure(MqttMaintainer *self) 
+    {
+        self->reconfigureMqttClient();
+    }
+
+    void MqttMaintainer::mqttConnectHandler()
     {
         char client_id[32];
 
@@ -284,6 +280,11 @@ namespace MicroUSC
 
         if (!this->addMqttClientSubscribe(MQTT_TOPIC("ota"), 0, ota_handle)) {
             ESP_LOGE(TAG, "Failed to subscribe to topic: %s", MQTT_TOPIC("ota"));
+            return;
+        }
+
+        if (this->addMqttClientSubscribe(MQTT_TOPIC("device_reconfigure"), 0, reconfigure_device)) {
+            ESP_LOGE(TAG, "Failed to subscribe to topic: %s", MQTT_TOPIC("device_reconfigure"));
             return;
         }
 
@@ -317,9 +318,10 @@ namespace MicroUSC
             #endif
             mqtt_data_package_t package = {
                 .event = event,
-                .json = root
+                .json = root,
+                .handler = this
             };
-            mqttDataRecievedHandler(&package);
+            this->mqttDataRecievedHandler(&package);
         }
     }
 
@@ -365,5 +367,10 @@ namespace MicroUSC
         strncpy(this->name, n, name_length);
 
         return 0; // Indicate success
+    }
+
+    void MqttMaintainer::reconfigureMqttClient()
+    {
+        this->sendConnectionInfo(); // Send connection info after reconfiguration
     }
 }

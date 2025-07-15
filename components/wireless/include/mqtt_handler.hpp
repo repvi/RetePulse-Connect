@@ -13,21 +13,18 @@
 struct mqtt_data_package_t {
     esp_mqtt_event_handle_t event;
     cJSON *json; // JSON data parsed from event
+    RetePulse::MqttMaintainer *handler;
 };
 
 typedef void (*mqtt_event_data_action_t)(mqtt_data_package_t *package);
 
-namespace MicroUSC {
+namespace RetePulse {
     class MqttMaintainer {
         public:
 
         static const int STRING_SIZE = 32; // Size for string buffers
         
         esp_err_t start(const esp_mqtt_client_config_t &config);
-    
-        const char *getDeviceName() const;
-        const char *getLastUpdated() const;
-        const char *getSensorType() const;
 
         bool addMqttClientSubscribe(const char *topic, int qos, mqtt_event_data_action_t action);
 
@@ -36,6 +33,8 @@ namespace MicroUSC {
 
         static void *convertFuncToIntptr(mqtt_event_data_action_t action);
         static mqtt_event_data_action_t convertIntptrToFunc(void *ptr);
+
+        static void mqttReconfigure(MqttMaintainer *self);
 
         private:
     
@@ -49,6 +48,8 @@ namespace MicroUSC {
         void mqttEventHandler(void* handler_args, esp_event_base_t base, int32_t event_id, void* event_data);
         
         int check_device_name(const char *new_name);
+
+        void reconfigureMqttClient();
 
         static void mqttEventHandlerHelper(void* handler_args, esp_event_base_t base, int32_t event_id, void* event_data);
 
