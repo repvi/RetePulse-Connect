@@ -1,4 +1,5 @@
 #include "mqtt_handler.hpp"
+#include "mediumware.h"
 
 #define TAG "[MQTT SERVICE]"
 
@@ -7,9 +8,13 @@
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
 
+#define MQTT_TOPIC(x) x
+#define CONNECTION_MQTT_SEND_INFO MQTT_TOPIC("device_info")
+#define MQTT_DEVICE_CHANGE CONNECTION_MQTT_SEND_INFO
+
 namespace RetePulse
 {   
-    const char *general_key[] = {
+    constexpr const char *general_key[] = {
         "device_name",
         "device_model",
         "last_updated",
@@ -33,7 +38,9 @@ namespace RetePulse
         strncpy(this->sensor_type, "uart", STRING_SIZE - 1);
 
         this->mqtt_device_map = hashmap_create(); /* Create a new hashmap for storing MQTT device subscriptions */
-        if (check_device_name(this->config.credentials.client_id) == 0 && this->mqtt_device_map != NULL) {
+
+        this->checkDeviceName(this->config.credentials.client_id);
+        if (this->mqtt_device_map != NULL) {
             esp_err_t con = setupMqttService(this->config.buffer.size, this->config.buffer.out_size);
             if (con == ESP_OK) {
                 ESP_LOGI(TAG, "MQTT service initialized successfully");
@@ -50,6 +57,37 @@ namespace RetePulse
         vSemaphoreDelete(this->mutex);
         this->mutex = NULL;
         return ESP_FAIL; // Return failure if any step fails
+    }
+
+    esp_err_t MqttMaintainer::stop()
+    {
+        esp_err_t ret = ESP_OK;
+
+        if (xSemaphoreTake(this->mutex, portMAX_DELAY) == pdTRUE) {
+            if (this->client != NULL) {
+                esp_mqtt_client_unregister_event(this->client, (esp_mqtt_event_id_t)ESP_EVENT_ANY_ID, mqttEventHandlerHelper);
+
+                esp_err_t stop_result = esp_mqtt_client_stop(this->client);
+                if (stop_result != ESP_OK) {
+                    ESP_LOGE(TAG, "Failed to stop MQTT client: %s", esp_err_to_name(stop_result));
+                    ret = stop_result; // Capture the error if stopping fails
+                }
+
+                esp_err_t destroy_result = esp_mqtt_client_destroy(this->client);
+                if (destroy_result != ESP_OK) {
+                    ESP_LOGE(TAG, "Failed to destroy MQTT client: %s", esp_err_to_name(destroy_result));
+                    ret = destroy_result; // Capture the error if destroying fails
+                }
+                this->client = NULL;
+            }
+            xSemaphoreGive(this->mutex);
+
+            return ret;
+        }
+        else {
+            ESP_LOGE(TAG, "Could not get semaphore for MQTT service stop");
+            return ESP_FAIL; // Return failure if semaphore could not be taken
+        }
     }
 
     bool MqttMaintainer::addMqttClientSubscribe(
@@ -258,9 +296,29 @@ namespace RetePulse
         //}
     }
 
-    static void reconfigure_device(mqtt_data_package_t *package)
+    static void control_handle(mqtt_data_package_t *package)
     {
-        MqttMaintainer::mqttReconfigure(package->handler);
+        char *data = package->event->data;
+        size_t data_len = package->event->data_len;
+
+        (void)data; // Suppress unused variable warning
+        (void)data_len; // Suppress unused variable warning
+        char *action_type = get_cjson_string(package->json, "action");
+        if (strcmp(action_type, "reconfigure") == 0) {
+            MqttMaintainer::mqttReconfigure(package->handler);
+        }
+        else if (strcmp(action_type, "gpio") == 0) {
+            char *option = get_cjson_string(package->json, "gpio");
+            if (strcmp(option, "config") == 0) {
+                configure_gpio(package->json);~
+            }
+            else {
+                set_gpio_state(package->json);
+            }
+        }
+        else if (strcmp(action_type, "ota_update") == 0) {
+            ota_handle(package);
+        }
     }
 
     void MqttMaintainer::mqttReconfigure(MqttMaintainer *self) 
@@ -268,23 +326,21 @@ namespace RetePulse
         self->reconfigureMqttClient();
     }
 
+    const char *MqttMaintainer::getName() const
+    {
+        return this->name;
+    }
+
+    static void setTopic(char *src, const char *topic, char *client_id, int total_size) {
+        snprintf(src, total_size, "%s/%s", topic, client_id);
+    }
+
     void MqttMaintainer::mqttConnectHandler()
     {
-        char client_id[32];
-
-        /* On connection, subscribe to sensor and LED topics */
-        if (!this->addMqttClientSubscribe(MQTT_TOPIC(CONNECTION_MQTT_SEND_INFO), 0, turnoff_led)) {
-            ESP_LOGE(TAG, "Failed to subscribe to topic: %s", MQTT_TOPIC(CONNECTION_MQTT_SEND_INFO));
-            return;
-        }
-
-        if (!this->addMqttClientSubscribe(MQTT_TOPIC("ota"), 0, ota_handle)) {
-            ESP_LOGE(TAG, "Failed to subscribe to topic: %s", MQTT_TOPIC("ota"));
-            return;
-        }
-
-        if (this->addMqttClientSubscribe(MQTT_TOPIC("device_reconfigure"), 0, reconfigure_device)) {
-            ESP_LOGE(TAG, "Failed to subscribe to topic: %s", MQTT_TOPIC("device_reconfigure"));
+        char full_topic[64];
+        setTopic(full_topic, MqttMaintainer::controlTopic, this->name, sizeof(full_topic));
+        if (!this->addMqttClientSubscribe(full_topic, 0, control_handle)) {
+            ESP_LOGE(TAG, "Failed to subscribe to topic: %s", full_topic);
             return;
         }
 
@@ -307,7 +363,7 @@ namespace RetePulse
         }
     }
 
-    void MqttMaintainer::mqttDataHandler(esp_mqtt_event_handle_t event) 
+    void MqttMaintainer::mqttDataHandler(esp_mqtt_event_handle_t event)
     {
         cJSON *root = check_cjson(event->data, event->data_len);
         if (root != NULL) {
@@ -352,17 +408,17 @@ namespace RetePulse
         xSemaphoreGive(this->mutex);
     }
 
-    int MqttMaintainer::check_device_name(const char *new_name)
+    int MqttMaintainer::checkDeviceName(const char *new_name)
     {
         int name_length;
         const char *n;
-        if (new_name == NULL) {
-            name_length = min(sizeof(NO_NAME), sizeof(this->name));
-            n = NO_NAME; // Use default name if new_name is NULL
-        } 
-        else {
+        if (new_name) {
             name_length = min(strlen(new_name) + 1, sizeof(this->name));
             n = new_name; // Use provided name
+        } 
+        else {
+            name_length = min(sizeof(NO_NAME), sizeof(this->name));
+            n = NO_NAME; // Use default name if new_name is NULL
         }
         strncpy(this->name, n, name_length);
 

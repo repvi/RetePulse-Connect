@@ -1,5 +1,6 @@
 set(SOURCES
     "hashmap.c"
+    "mediumware.c"
     "mqtt_handler.cpp"
     "mqtt_operation.cpp"
     "ota_operation.c"
@@ -11,6 +12,7 @@ set(SOURCES
 idf_component_register(
     SRCS ${SOURCES}
     INCLUDE_DIRS "include" "."
+    PRIV_INCLUDE_DIRS "internal_include"
     REQUIRES 
         esp_wifi 
         esp_event 

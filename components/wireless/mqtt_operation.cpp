@@ -1,5 +1,5 @@
-#include "mqtt_handler.hpp"
 #include "mqtt_operation.h"
+#include "mqtt_handler.hpp"
 #include "ota_operation.h"
 #include "wifi_operation.h"
 #include "parsing.h"
@@ -21,6 +21,46 @@ extern "C" int send_to_mqtt_service_multiple(MqttMaintainerHandler handler, char
 {
     RetePulse::MqttMaintainer *maintainer = reinterpret_cast<RetePulse::MqttMaintainer *>(handler);
     return maintainer->sendToMqttServiceMultiple(topic, key, data, len);
+}
+
+extern "C" int send_mqtt_device_status(MqttMaintainerHandler handler, mqtt_device_status_t status)
+{
+    char topic[48];
+    RetePulse::MqttMaintainer *maintainer = reinterpret_cast<RetePulse::MqttMaintainer *>(handler);
+    int written = snprintf(topic, sizeof(topic), "%s%s", RetePulse::MqttMaintainer::statusTopic, maintainer->getName());
+    if (written > sizeof(topic)) {
+        ESP_LOGE(TAG, "Topic buffer too small for status %d", status);
+        return -1; // Indicate failure
+    }
+
+    const char *key = "status";
+    const char *data = nullptr;
+
+    switch (status) {
+        case MQTT_DEVICE_STATUS_CONNECTED:
+            data = "connected";
+            break;
+        case MQTT_DEVICE_STATUS_DISCONNECTED:
+            data = "disconnected";
+            break;
+        case MQTT_DEVICE_STATUS_SLEEPING:
+            data = "sleeping";
+            break;
+        case MQTT_DEVICE_STATUS_AWAITING_SLEEP:
+            data = "awaiting_sleep";
+            break;
+        case MQTT_DEVICE_STATUS_HEAP_ERROR:
+            data = "heap_error";
+            break;
+        case MQTT_DEVICE_STATUS_ERROR:
+            data = "error";
+            break;
+        default:
+            data = "unknown";
+            break;
+    }
+
+    return send_to_mqtt_service_single(handler, topic, key, data);
 }
 
 extern "C" bool add_esp_mqtt_client_subscribe(
@@ -62,7 +102,7 @@ extern "C" void mqtt_service_deinit(MqttMaintainerHandler handler)
 {
     RetePulse::MqttMaintainer *maintainer = reinterpret_cast<RetePulse::MqttMaintainer *>(handler);
     if (maintainer) {
-        // maintainer->stop();
+        maintainer->stop();
         heap_caps_free(maintainer);
     }
 }

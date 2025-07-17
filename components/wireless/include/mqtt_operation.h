@@ -17,10 +17,6 @@ extern "C" {
 #define MQTT_ENABLED   true
 #define MQTT_DISABLED  false
 
-#define MQTT_TOPIC(x) x
-#define CONNECTION_MQTT_SEND_INFO MQTT_TOPIC("device_info")
-#define MQTT_DEVICE_CHANGE CONNECTION_MQTT_SEND_INFO
-
 typedef struct MqttMaintainer MqttMaintainer;
 typedef MqttMaintainer *MqttMaintainerHandler;
 
@@ -29,6 +25,15 @@ typedef struct {
     char *sensor_type;
     char *model;
 } mqtt_device_info_t;
+
+typedef enum {
+    MQTT_DEVICE_STATUS_HEAP_ERROR = -3,
+    MQTT_DEVICE_STATUS_ERROR = -2,
+    MQTT_DEVICE_STATUS_DISCONNECTED = -1,
+    MQTT_DEVICE_STATUS_CONNECTED,
+    MQTT_DEVICE_STATUS_SLEEPING,
+    MQTT_DEVICE_STATUS_AWAITING_SLEEP
+} mqtt_device_status_t;
 
 /**
  * @brief Send single key-value pair as JSON to MQTT topic
@@ -48,6 +53,39 @@ int send_to_mqtt_service_single(MqttMaintainerHandler handler, char *const topic
  * @return >0 on success, -1 on JSON fail, -2 if buffer too small
  */
 int send_to_mqtt_service_multiple(MqttMaintainerHandler handler, char *const topic, const char**key, const char**data, int len);
+
+/**
+ * @brief Send device status update to MQTT broker
+ * 
+ * @description
+ * Publishes device operational status as JSON to the device status topic
+ * for health monitoring and system state reporting.
+ * 
+ * @param handler Valid MqttMaintainerHandler from init_mqtt()
+ * @param status Device status enumeration:
+ *               - MQTT_DEVICE_STATUS_CONNECTED: Device operational
+ *               - MQTT_DEVICE_STATUS_DISCONNECTED: Device offline
+ *               - MQTT_DEVICE_STATUS_SLEEPING: Power-save mode
+ *               - MQTT_DEVICE_STATUS_AWAITING_SLEEP: Preparing for sleep
+ *               - MQTT_DEVICE_STATUS_HEAP_ERROR: Memory failure
+ *               - MQTT_DEVICE_STATUS_ERROR: General error condition
+ * 
+ * @return int Operation result:
+ *         - Positive: MQTT message ID for tracking
+ *         - -1: Topic buffer overflow or JSON failure
+ *         - -2: MQTT publish failed
+ *         - -3: Invalid parameters
+ * 
+ * @json_output {"status": "connected"|"disconnected"|"sleeping"|"awaiting_sleep"|"heap_error"|"error"|"unknown"}
+ * @topic_format "device/{device_id}/status"
+ * 
+ * @preconditions Valid handler, active MQTT connection
+ * @thread_safety Thread-safe with valid handler
+ * @memory_usage ~64 bytes stack for topic string
+ * 
+ * @usage_frequency On startup/shutdown, power transitions, errors, periodic heartbeat
+ */
+int send_mqtt_device_status(MqttMaintainerHandler handler, mqtt_device_status_t status);
 
 /**
  * @brief MQTT event handler for ESP-IDF MQTT client.
