@@ -303,21 +303,36 @@ namespace RetePulse
 
         (void)data; // Suppress unused variable warning
         (void)data_len; // Suppress unused variable warning
-        char *action_type = get_cjson_string(package->json, "action");
-        if (strcmp(action_type, "reconfigure") == 0) {
+
+        char command[64];
+        char *temp = get_cjson_string(package->json, "command");
+        strncpy(command, temp, min(strlen(temp), sizeof(command) - 1));
+
+        if (strcmp(command, "reconfigure") == 0) {
             MqttMaintainer::mqttReconfigure(package->handler);
         }
-        else if (strcmp(action_type, "gpio") == 0) {
-            char *option = get_cjson_string(package->json, "gpio");
-            if (strcmp(option, "config") == 0) {
-                configure_gpio(package->json);~
+        else if (strcmp(command, "gpio") == 0) {
+            char *option = get_cjson_string(package->json, "set");
+            if (option == NULL) {
+                ESP_LOGE(TAG, "GPIO action not specified in data");
+                return;
             }
-            else {
+
+            if (strcmp(option, "config") == 0) {
+                configure_gpio(package->json);
+            }
+            else if (strcmp(option, "state") == 0) {
                 set_gpio_state(package->json);
             }
+            else {
+                ESP_LOGW(TAG, "Unknown GPIO action: %s", option);
+            }
         }
-        else if (strcmp(action_type, "ota_update") == 0) {
+        else if (strcmp(command, "ota_update") == 0) {
             ota_handle(package);
+        }
+        else if (strcmp(command, "reset") == 0) {
+            esp_restart();
         }
     }
 

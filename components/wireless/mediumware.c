@@ -8,10 +8,10 @@
 void configure_gpio(cJSON *json)
 {
     char *pin_num = get_cjson_string(json, "pin");
-    char *pin_type = get_cjson_string(json, "type");
+    char *pin_type = get_cjson_string(json, "state");
     if (pin_num && pin_type) {
         gpio_num_t pin = atoi(pin_num);
-        
+
         if (strcpy(pin_type, "output") == 0) {
             gpio_config_t io_conf = {
                 .pin_bit_mask = (1ULL << pin),
