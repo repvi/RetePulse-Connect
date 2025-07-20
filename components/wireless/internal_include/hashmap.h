@@ -9,7 +9,7 @@ extern "C" {
 
 // Configurable settings
 #define HASHMAP_SIZE 8          // Must be power of 2
-#define MAX_KEY_LENGTH 16
+#define MAX_KEY_LENGTH 32
 #define HASH_SEED 0x12345678    // Initial hash seed
 
 typedef struct hashmap_t *HashMap;

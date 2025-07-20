@@ -56,7 +56,7 @@ cJSON *check_cjson(char *const data, size_t data_len);
  * For JSON: {"name": "sensor1"}
  * get_cjson_string(root, "name") returns "sensor1"
  */
-char *get_cjson_string(cJSON *item, char *const key);
+char *get_cjson_string(cJSON *item, const char *key);
 
 /**
  * @brief Safely extracts an integer from a cJSON object

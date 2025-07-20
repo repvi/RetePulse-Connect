@@ -97,6 +97,7 @@ namespace RetePulse
     ) {
         int id = esp_mqtt_client_subscribe(this->client, topic, qos);
         if (id < 0) {
+            ESP_LOGE(TAG, "Failed to subscribe to topic %s: %s", topic, esp_err_to_name(id));
             return false; // Subscription failed
         }
         else {
@@ -306,7 +307,11 @@ namespace RetePulse
 
         char command[64];
         char *temp = get_cjson_string(package->json, "command");
-        strncpy(command, temp, min(strlen(temp), sizeof(command) - 1));
+        printf("Received command: %s\n", temp ? temp : "NULL");
+        int str_size = min(strlen(temp), sizeof(command) - 1);
+        strncpy(command, temp, str_size);
+        printf("Command received: %s\n", command);
+        command[str_size] = '\0';
 
         if (strcmp(command, "reconfigure") == 0) {
             MqttMaintainer::mqttReconfigure(package->handler);
@@ -318,10 +323,12 @@ namespace RetePulse
                 return;
             }
 
-            if (strcmp(option, "config") == 0) {
+            if (strcmp(option, "configure") == 0) {
+                printf("Configuring GPIO\n");
                 configure_gpio(package->json);
             }
             else if (strcmp(option, "state") == 0) {
+                printf("Setting GPIO state\n");
                 set_gpio_state(package->json);
             }
             else {
@@ -334,6 +341,8 @@ namespace RetePulse
         else if (strcmp(command, "reset") == 0) {
             esp_restart();
         }
+
+        printf("control_handle has been triggered\n");
     }
 
     void MqttMaintainer::mqttReconfigure(MqttMaintainer *self) 

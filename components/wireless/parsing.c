@@ -54,7 +54,7 @@ cJSON *check_cjson(char *const data, size_t data_len)
     return cJSON_ParseWithLength(data, data_len);
 }
 
-char *get_cjson_string(cJSON *item, char *const key)
+char *get_cjson_string(cJSON *item, const char *key)
 {
     cJSON *child = cJSON_GetObjectItemCaseSensitive(item, key);
     if (child && cJSON_IsString(child) && child->valuestring) {
