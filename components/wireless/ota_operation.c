@@ -1,1 +1,0 @@
-#include "ota_operation.h"

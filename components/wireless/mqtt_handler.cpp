@@ -1,5 +1,6 @@
 #include "mqtt_handler.hpp"
 #include "mediumware.h"
+#include "esp_https_ota.h"
 
 #define TAG "[MQTT SERVICE]"
 
@@ -284,27 +285,27 @@ namespace RetePulse
         }
     }
 
-    static void ota_handle(mqtt_data_package_t *package) 
+    static void ota_handle(mqtt_data_package_t *package)
     {
-        char *data = package->event->data;
-        size_t data_len = package->event->data_len;
+        ESP_LOGI(TAG, "Starting OTA update");
 
-        (void)data; // Suppress unused variable warning
-        (void)data_len; // Suppress unused variable warning
+        esp_http_client_config_t http_config;
+        http_config.url = package->handler->getOTAaddress();
+        esp_https_ota_config_t config = {
+            .http_config = &http_config,
+        };
 
-        //if (strncmp(data, "update", data_len) == 0) {
-        //    xTaskCreate(&ota_task, "ota_task", 8192, NULL, 5, NULL);
-        //}
+        esp_err_t ret = esp_https_ota(&config);
+        if (ret == ESP_OK) {
+            ESP_LOGI(TAG, "OTA update successful, restarting...");
+            esp_restart();
+        } else {
+            ESP_LOGE(TAG, "OTA update failed...");
+        }
     }
 
     static void control_handle(mqtt_data_package_t *package)
     {
-        char *data = package->event->data;
-        size_t data_len = package->event->data_len;
-
-        (void)data; // Suppress unused variable warning
-        (void)data_len; // Suppress unused variable warning
-
         char command[64];
         char *temp = get_cjson_string(package->json, "command");
         printf("Received command: %s\n", temp ? temp : "NULL");
@@ -341,8 +342,6 @@ namespace RetePulse
         else if (strcmp(command, "reset") == 0) {
             esp_restart();
         }
-
-        printf("control_handle has been triggered\n");
     }
 
     void MqttMaintainer::mqttReconfigure(MqttMaintainer *self) 
@@ -355,6 +354,17 @@ namespace RetePulse
         return this->name;
     }
 
+    void MqttMaintainer::OTAaddress(const char *address)
+    {
+        strncpy(this->ota_address, address, MqttMaintainer::STRING_SIZE - 1);
+        this->ota_address[MqttMaintainer::STRING_SIZE - 1] = '\0'; // Ensure null-termination
+    }
+
+    char *MqttMaintainer::getOTAaddress()
+    {
+        return this->ota_address;
+    }
+
     static void setTopic(char *src, const char *topic, char *client_id, int total_size) {
         snprintf(src, total_size, "%s/%s", topic, client_id);
     }
@@ -364,7 +374,11 @@ namespace RetePulse
         char full_topic[64];
         setTopic(full_topic, MqttMaintainer::controlTopic, this->name, sizeof(full_topic));
         if (!this->addMqttClientSubscribe(full_topic, 0, control_handle)) {
-            ESP_LOGE(TAG, "Failed to subscribe to topic: %s", full_topic);
+            return;
+        }
+
+        setTopic(full_topic, MqttMaintainer::otaTopic, CONFIG_IDF_TARGET, sizeof(full_topic));
+        if (!this->addMqttClientSubscribe(full_topic, 0, ota_handle)) {
             return;
         }
 

@@ -3,7 +3,6 @@ set(SOURCES
     "mediumware.c"
     "mqtt_handler.cpp"
     "mqtt_operation.cpp"
-    "ota_operation.c"
     "parsing.c"
     "wifi_handler.cpp"
     "wifi_operation.cpp"

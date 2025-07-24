@@ -1,6 +1,5 @@
 #include "mqtt_operation.h"
 #include "mqtt_handler.hpp"
-#include "ota_operation.h"
 #include "wifi_operation.h"
 #include "parsing.h"
 #include "hashmap.h"
@@ -33,7 +32,7 @@ extern "C" int send_mqtt_device_status(MqttMaintainerHandler handler, mqtt_devic
         return -1; // Indicate failure
     }
 
-    const char *key = "status";
+    constexpr const char *key = "status";
     const char *data = nullptr;
 
     switch (status) {

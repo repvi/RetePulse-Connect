@@ -30,7 +30,6 @@
 #pragma once
 
 #include "mqtt_operation.h"
-#include "ota_operation.h"
 #include "wifi_operation.h"
 #include "parsing.h"
 #include "hashmap.h"
@@ -163,6 +162,8 @@ namespace RetePulse {
 
         const char *getName() const;
 
+        void OTAaddress(const char *address);
+        char *getOTAaddress();
     private:
 
         /**
@@ -253,7 +254,10 @@ namespace RetePulse {
         char last_updated[STRING_SIZE];
         char sensor_type[STRING_SIZE];
 
+        char ota_address[STRING_SIZE];
+
         static constexpr const char *controlTopic = "control";
+        static constexpr const char *otaTopic = "ota";
     };
 } // namespace RetePulse
 
