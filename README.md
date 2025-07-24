@@ -1,35 +1,100 @@
 | Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C6 | ESP32-H2 | ESP32-P4 | ESP32-S2 | ESP32-S3 |
 | ----------------- | ----- | -------- | -------- | -------- | -------- | -------- | -------- | -------- |
 
-# _Sample project_
-pu
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+# ESP-IDF Sample Project
 
-This is the simplest buildable example. The example is used by command `idf.py create-project`
-that copies the project to user specified path and set it's name. For more information follow the [docs page](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project)
+This repository provides a minimal, buildable ESP-IDF project template for ESP32-based devices. It demonstrates best practices for project structure, component organization, and integration of WiFi and MQTT functionality.
 
+## Table of Contents
 
+- [Overview](#overview)
+- [Features](#features)
+- [Project Structure](#project-structure)
+- [Components](#components)
+- [Usage](#usage)
+- [Getting Started](#getting-started)
+- [License](#license)
 
-## How to use example
-We encourage the users to use the example as a template for the new projects.
-A recommended way is to follow the instructions on a [docs page](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project).
+## Overview
 
-## Example folder contents
+This project is intended as a starting point for new ESP-IDF applications. It includes example implementations for WiFi connectivity, MQTT communication, and a simple hashmap utility for key-value storage.  
+You can use the `idf.py create-project` command to copy this template and set your project name.  
+For more details, refer to the [ESP-IDF build system documentation](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project).
 
-The project **sample_project** contains one source file in C language [main.c](main/main.c). The file is located in folder [main](main).
+## Features
 
-ESP-IDF projects are built using CMake. The project build configuration is contained in `CMakeLists.txt`
-files that provide set of directives and instructions describing the project's source files and targets
-(executable, library, or both). 
+- WiFi connection management
+- MQTT client setup, publish, subscribe, and event handling
+- Simple hashmap implementation for fast key-value lookups
+- Modular and extensible component structure
 
-Below is short explanation of remaining files in the project folder.
+## Project Structure
 
 ```
 ├── CMakeLists.txt
 ├── main
 │   ├── CMakeLists.txt
 │   └── main.c
-└── README.md                  This is the file you are currently reading
+├── components
+│   └── wireless
+│       ├── hashmap.c
+│       ├── include
+│       │   ├── hashmap.h
+│       │   ├── mqtt_handler.hpp
+│       │   ├── mqtt_operation.h
+│       │   ├── wifi_handler.hpp
+│       ├── mqtt_operation.cpp
+├── README.md
 ```
-Additionally, the sample project contains Makefile and component.mk files, used for the legacy Make based build system. 
-They are not used or needed when building with CMake and idf.py.
+
+## Components
+
+- **wireless/hashmap.c / hashmap.h**  
+  Implements a lightweight hashmap for key-value storage, optimized for embedded systems.
+
+- **wireless/include/mqtt_handler.hpp / mqtt_operation.h / mqtt_operation.cpp**  
+  Provides MQTT client management, event handling, and message publishing/subscribing.  
+  - `MqttMaintainer` class: Main interface for MQTT operations.
+  - Functions for sending single/multiple key-value pairs as JSON to MQTT topics.
+  - Event handler for MQTT events.
+
+- **wireless/include/wifi_handler.hpp**  
+  Manages WiFi connection and event handling.
+
+- **esp_system.h**  
+  ESP-IDF system functions for reset, heap management, and shutdown handlers.
+
+- **esp-mqtt/include/mqtt_client.h**  
+  ESP-IDF MQTT client API for connecting, publishing, subscribing, and event handling.
+
+## Usage
+
+- Use `init_mqtt()` to initialize the MQTT client with configuration and device info.
+- Use `send_to_mqtt_service_single()` and `send_to_mqtt_service_multiple()` to publish data.
+- Use `add_esp_mqtt_client_subscribe()` to subscribe to topics with custom handlers.
+- WiFi setup is managed via the `WifiMaintainer` class.
+
+## Getting Started
+
+1. Clone this repository.
+2. Configure your project and WiFi/MQTT settings in the relevant source/header files.
+3. Build the project using CMake and ESP-IDF tools:
+   ```
+   idf.py build
+   ```
+4. Flash the firmware to your ESP32 device:
+   ```
+   idf.py -p <PORT> flash
+   ```
+5. Monitor the device output:
+   ```
+   idf.py -p <PORT> monitor
+   ```
+
+## License
+
+This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
+
+---
+# Other Software
+What to connect the esp32s to the main software? Please checkout [RetePulse](https://github.com/repvi/RetePulse)

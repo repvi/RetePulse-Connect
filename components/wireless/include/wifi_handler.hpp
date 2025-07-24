@@ -13,15 +13,37 @@
 #include "esp_log.h"
 
 namespace MicroUSC {
+
+    /**
+     * @brief Maintains WiFi connection and handles WiFi events.
+     *
+     * Usage:
+     * - Call startWifi() to connect to WiFi.
+     * - Use createWifiEventGroup() and createWifiInstance() for setup.
+     * - wifiEventHandler() handles WiFi events.
+     */
     class WifiMaintainer {
         public:
+        /**
+         * @brief Start WiFi with the given configuration.
+         */
         void startWifi(wifi_config_t *wifi_config);
+
+        /**
+         * @brief Create event group for WiFi events.
+         */
         void createWifiEventGroup();
-    
-        /* Create the default WiFi station interface */
+
+        /**
+         * @brief Create the default WiFi station interface.
+         */
         void createWifiInstance();
 
+        /**
+         * @brief WiFi event handler.
+         */
         void wifiEventHandler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
+
         private:
 
         EventGroupHandle_t wifi_event_group;

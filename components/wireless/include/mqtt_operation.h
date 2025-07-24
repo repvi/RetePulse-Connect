@@ -21,17 +21,24 @@ extern "C" {
 #define CONNECTION_MQTT_SEND_INFO MQTT_TOPIC("device_info")
 #define MQTT_DEVICE_CHANGE CONNECTION_MQTT_SEND_INFO
 
+/**
+ * @brief Maintainer for MQTT client.
+ */
 typedef struct MqttMaintainer MqttMaintainer;
 typedef MqttMaintainer *MqttMaintainerHandler;
 
+/**
+ * @brief Device info for MQTT registration.
+ */
 typedef struct {
-    char *last_updated;
-    char *sensor_type;
-    char *model;
+    char *last_updated; ///< Last updated timestamp
+    char *sensor_type;  ///< Sensor type string
+    char *model;        ///< Device model string
 } mqtt_device_info_t;
 
 /**
- * @brief Send single key-value pair as JSON to MQTT topic
+ * @brief Send single key-value pair as JSON to MQTT topic.
+ * @see MqttMaintainer::sendToMqttServiceSingle
  * @param topic MQTT topic
  * @param key   JSON key
  * @param data  JSON value
@@ -40,7 +47,8 @@ typedef struct {
 int send_to_mqtt_service_single(MqttMaintainerHandler handler, char *const topic, char const *const key, const char *const data);
 
 /**
- * @brief Send multiple key-value pairs as JSON to MQTT topic
+ * @brief Send multiple key-value pairs as JSON to MQTT topic.
+ * @see MqttMaintainer::sendToMqttServiceMultiple
  * @param topic MQTT topic
  * @param key   Array of JSON keys
  * @param data  Array of JSON values
@@ -51,6 +59,7 @@ int send_to_mqtt_service_multiple(MqttMaintainerHandler handler, char *const top
 
 /**
  * @brief MQTT event handler for ESP-IDF MQTT client.
+ * Handles connection, data reception, and topic actions.
  *
  * Handles various MQTT events such as connection, data reception, and others.
  * - On connection, subscribes to "home/sensor" and "home/led" topics.
@@ -66,7 +75,8 @@ int send_to_mqtt_service_multiple(MqttMaintainerHandler handler, char *const top
 void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_t event_id, void* event_data);
 
 /**
- * @brief Initialize MQTT client service with specified parameters
+ * @brief Initialize MQTT client service with specified parameters.
+ * @see MqttMaintainer::start
  *
  * @param url          MQTT broker URL
  * @param buffer_size  Size for receive buffer (minimum 1024 bytes)
@@ -84,7 +94,7 @@ void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_t event
 MqttMaintainerHandler init_mqtt(esp_mqtt_client_config_t *mqtt_cfg, const mqtt_device_info_t *device_info);
 
 /**
- * @brief Deinitialize MQTT service and clean up resources
+ * @brief Deinitialize MQTT service and clean up resources.
  *
  * Frees allocated memory, destroys mutex, and stops MQTT client.
  * Should be called when MQTT service is no longer needed.

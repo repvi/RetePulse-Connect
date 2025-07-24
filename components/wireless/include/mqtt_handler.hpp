@@ -10,31 +10,80 @@
 #include "esp_system.h"
 #include "esp_log.h"
 
+/**
+ * @brief Data package for MQTT event handling.
+ */
 struct mqtt_data_package_t {
-    esp_mqtt_event_handle_t event;
-    cJSON *json; // JSON data parsed from event
+    esp_mqtt_event_handle_t event; ///< MQTT event handle
+    cJSON *json; ///< JSON data parsed from event
 };
 
+/**
+ * @brief Function pointer type for handling MQTT event data.
+ */
 typedef void (*mqtt_event_data_action_t)(mqtt_data_package_t *package);
 
 namespace MicroUSC {
+
+    /**
+     * @brief Maintains MQTT client connection, subscriptions, and message publishing.
+     *
+     * Usage:
+     * - Call start() to initialize and connect.
+     * - Use addMqttClientSubscribe() to subscribe to topics.
+     * - Use sendToMqttServiceSingle()/sendToMqttServiceMultiple() to publish data.
+     */
     class MqttMaintainer {
         public:
+        static const int STRING_SIZE = 32; ///< Size for string buffers
 
-        static const int STRING_SIZE = 32; // Size for string buffers
-        
+        /**
+         * @brief Start the MQTT client with the given configuration.
+         * @param config MQTT client configuration
+         * @return ESP_OK on success
+         */
         esp_err_t start(const esp_mqtt_client_config_t &config);
-    
+
+        /**
+         * @brief Get device name.
+         */
         const char *getDeviceName() const;
+        /**
+         * @brief Get last updated timestamp.
+         */
         const char *getLastUpdated() const;
+        /**
+         * @brief Get sensor type.
+         */
         const char *getSensorType() const;
 
+        /**
+         * @brief Subscribe to an MQTT topic with a custom action handler.
+         * @param topic Topic string
+         * @param qos Quality of Service level
+         * @param action Handler function for received data
+         * @return true on success
+         */
         bool addMqttClientSubscribe(const char *topic, int qos, mqtt_event_data_action_t action);
 
+        /**
+         * @brief Send a single key-value pair as JSON to an MQTT topic.
+         */
         int sendToMqttServiceSingle(char *const topic, char const *const key, const char *const data);
+
+        /**
+         * @brief Send multiple key-value pairs as JSON to an MQTT topic.
+         */
         int sendToMqttServiceMultiple(char *const topic, const char**key, const char**data, int len);
 
+        /**
+         * @brief Convert function pointer to void* for storage.
+         */
         static void *convertFuncToIntptr(mqtt_event_data_action_t action);
+
+        /**
+         * @brief Convert void* back to function pointer.
+         */
         static mqtt_event_data_action_t convertIntptrToFunc(void *ptr);
 
         private:
@@ -64,4 +113,4 @@ namespace MicroUSC {
         char last_updated[STRING_SIZE];
         char sensor_type[STRING_SIZE];
     };
-}
+} // namespace MicroUSC

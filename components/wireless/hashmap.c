@@ -1,3 +1,11 @@
+/**
+ * @file hashmap.c
+ * @brief Simple hashmap implementation for key-value storage.
+ *
+ * Provides basic put/get/remove operations with linear probing for collision resolution.
+ * Used for fast lookups in embedded environments.
+ */
+
 #include "hashmap.h"
 #include "stdio.h"
 #include <string.h>
