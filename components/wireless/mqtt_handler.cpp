@@ -272,19 +272,6 @@ namespace RetePulse
         );
     }
 
-    static void turnoff_led(mqtt_data_package_t *package)
-    {
-        esp_mqtt_event_handle_t event = package->event;
-        (void)event; // Suppress unused variable warning
-    
-        // Extract LED status
-        char *led_status = get_cjson_string(package->json, "led_status");
-        if (led_status == NULL) {
-            ESP_LOGE(TAG, "LED status not found in data");
-            return;
-        }
-    }
-
     static void ota_handle(mqtt_data_package_t *package)
     {
         ESP_LOGI(TAG, "Starting OTA update");
@@ -393,11 +380,11 @@ namespace RetePulse
     void MqttMaintainer::mqttReconnectHandler() 
     {
         esp_err_t err = esp_mqtt_client_reconnect(this->client);
-        if (err != ESP_OK) {
-            ESP_LOGI(TAG, "Failed to reconnect");
+        if (err == ESP_OK) {
+            ESP_LOGI(TAG, "Reconnected successfully");
         }
         else {
-            ESP_LOGI(TAG, "Reconnected successfully");
+            ESP_LOGI(TAG, "Failed to reconnect");
         }
     }
 
